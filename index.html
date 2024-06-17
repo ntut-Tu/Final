@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>環境監測</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        .container {
+            text-align: left;
+        }
+        .sensor-label {
+            font-size: 16px;
+        }
+        .sensor-value {
+            font-size: 20px;
+        }
+        button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>環境監測</h1>
+    <div>
+        <h2><span class="sensor-label">光敏值: </span><span id="light-sensor" class="sensor-value"></span></h2>
+        <h2><span class="sensor-label">濕度: </span><span id="humidity" class="sensor-value"></span><span class="sensor-label">%</span></h2>
+        <h2 id="clothing-status"></h2>
+        <h2><span class="sensor-label">模式狀態: </span><span id="mode-status" class="sensor-value"></span></h2>
+    </div>
+    <button id="start-drying" onclick="setMode('on')">開始晾衣服</button>
+    <button id="start-collecting" onclick="setMode('off')">開始收衣服</button>
+    <div id="server-response"></div>
+</div>
+
+<script>
+    let isMonitoring = false;
+
+    function fetchData() {
+        if (isMonitoring) {
+            // 獲取光敏值
+            $.ajax({
+                url: "/get_lightValue",
+                success: function (data) {
+                    $("#light-sensor").text(data);
+                }
+            });
+
+            // 獲取濕度值
+            $.ajax({
+                url: "/get_wetValue",
+                success: function (data) {
+                    $("#humidity").text(data);
+                }
+            });
+
+            // 獲取是否需要收衣服
+            $.ajax({
+                url: "/get_hanging_clothes_mode",
+                success: function (data) {
+                    $("#clothing-status").text(data);
+                }
+            });
+        }
+    }
+
+    function setMode(mode) {
+        sendRequest(`/set_hanging_clothes_mode?mode=${mode}`);
+        isMonitoring = (mode === 'on');
+        updateModeStatus();
+    }
+
+    function updateModeStatus() {
+        const modeStatus = isMonitoring ? "晾衣模式開啟" : "晾衣模式關閉";
+        document.getElementById("mode-status").textContent = modeStatus;
+    }
+
+    function sendRequest(url) {
+        fetch(url)
+            .then(response => response.text())
+            .then(message => {
+                console.log(message);
+                document.getElementById("server-response").textContent = message;
+            })
+            .catch(error => console.error("Error:", error));
+    }
+
+    setInterval(fetchData, 5000); // 每 5 秒更新一次
+    fetchData(); // 初始化顯示
+    updateModeStatus(); // 初始化模式狀態顯示
+</script>
+</body>
+</html>
